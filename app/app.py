@@ -6,33 +6,39 @@ import os
 import base64
 import pickle
 
+# RUN streamlit run app.py IN PY Terminal
+
+
 # Molecular descriptor calculator
 def desc_calc():
-	bashCommand = "java -Xms2G -Xmx2G -Djava.awt.headless=true -jar ./PaDEL-Descriptor/PaDEL-Descriptor.jar -removesalt -standardizenitro -fingerprints -descriptortypes ./PaDEL-Descriptor/PubchemFingerprinter.xml -dir ./ -file descriptors_output.csv"
-	process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
-	output, error = process.communicate()
-	os.remove('molecule.smi')
-	
+    bashCommand = "java -Xms2G -Xmx2G -Djava.awt.headless=true -jar ./PaDEL-Descriptor/PaDEL-Descriptor.jar -removesalt -standardizenitro -fingerprints -descriptortypes ./PaDEL-Descriptor/PubchemFingerprinter.xml -dir ./ -file descriptors_output.csv"
+    process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+    output, error = process.communicate()
+    os.remove('molecule.smi')
+
+
 def filedownload(df):
-	 csv = df.to_csv(index=False)
-	 # string byte conv
-	 b64 = base64.b64encode(csv.encode()).decode() 
-	 href = f'<a href="data:file/csv;base64,{b64}" download="prediction.csv">Download Predictions</a>'
-	 return href
-	 
+    csv = df.to_csv(index=False)
+    # string byte conv
+    b64 = base64.b64encode(csv.encode()).decode()
+    href = f'<a href="data:file/csv;base64,{b64}" download="prediction.csv">Download Predictions</a>'
+    return href
+
+
 def build_model(input_data):
-	# read saved regression model
-	load_model = pickle.load(open('acetylcholinesterase_model.pkl','rb'))
-	# apply model to make predictions
-	prediction = load_model.predict(input_data)
-	st.header('**Prediction output**')
-	prediction_output = pd.Series(prediction, name='pIC50')
-	molecule_name = pd.Series(load_data[1], name='molecule_name')
-	df = pd.concat([molecule_name, prediction_output], axis=1)
-	st.write(df)
-	st.markdown(filedownload(df), unsafe_allow_html=True)
-	
-#logo image
+    # read saved regression model
+    load_model = pickle.load(open('acetylcholinesterase_model.pkl', 'rb'))
+    # apply model to make predictions
+    prediction = load_model.predict(input_data)
+    st.header('**Prediction output**')
+    prediction_output = pd.Series(prediction, name='pIC50')
+    molecule_name = pd.Series(load_data[1], name='molecule_name')
+    df = pd.concat([molecule_name, prediction_output], axis=1)
+    st.write(df)
+    st.markdown(filedownload(df), unsafe_allow_html=True)
+
+
+# logo image
 image = Image.open('logo.png')
 
 st.image(image, use_column_width=True)
@@ -49,32 +55,32 @@ Descriptor calculated using [PaDEL-Descriptor](http://www.yapcwsoft.com/dd/padel
 
 # Sidebar
 with st.sidebar.header('1. Upload your CSV data'):
-	uploaded_file = st.sidebar.file_uploader("Upload your input file", type=['txt'])
+    uploaded_file = st.sidebar.file_uploader("Upload your input file", type=['txt'])
 
 if st.sidebar.button('Predict'):
-	load_data = pd.read_table(uploaded_file, sep=' ', header=None)
-	load_data.to_csv('molecule.smi', sep = '\t', header = False, index = False)
-	
-	st.header('**Original input data**')
-	st.write(load_data)
-	
-	with st.spinner("Calculating descriptors..."):
-		desc_calc()
-		
-	# read calculated descriptors and display df
-	st.header('**Calculated molecular descriptors**')
-	desc = pd.read_csv('descriptors_output.csv')
-	st.write(desc)
-	st.write(desc.shape)
-	
-	#read descriptor list used in previously built model
-	st.header('**Subset of descriptors from previously built models**')
-	Xlist = list(pd.read_csv('descriptor_list.csv').columns)
-	desc_subset = desc[Xlist]
-	st.write(desc_subset)
-	st.write(desc_subset.shape)
-	
-	# apply trained model to make prediction on query compounds
-	build_model(desc_subset)
+    load_data = pd.read_table(uploaded_file, sep=' ', header=None)
+    load_data.to_csv('molecule.smi', sep='\t', header=False, index=False)
+
+    st.header('**Original input data**')
+    st.write(load_data)
+
+    with st.spinner("Calculating descriptors..."):
+        desc_calc()
+
+    # read calculated descriptors and display df
+    st.header('**Calculated molecular descriptors**')
+    desc = pd.read_csv('descriptors_output.csv')
+    st.write(desc)
+    st.write(desc.shape)
+
+    # read descriptor list used in previously built model
+    st.header('**Subset of descriptors from previously built models**')
+    Xlist = list(pd.read_csv('descriptor_list.csv').columns)
+    desc_subset = desc[Xlist]
+    st.write(desc_subset)
+    st.write(desc_subset.shape)
+
+    # apply trained model to make prediction on query compounds
+    build_model(desc_subset)
 else:
-	st.info('Upload input data in the sidebar to start!')
+    st.info('Upload input data in the sidebar to start!')
